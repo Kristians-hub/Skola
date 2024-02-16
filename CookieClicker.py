@@ -45,7 +45,13 @@ def cepuma_daudz():
     d = item.split(" ")
     daudz = int(d[0])
     return daudz
+for x in range(1, 150):
+     cepums.click()
 
+spiedejs = driver.find_element(By.XPATH, "/html/body/div[2]/div[2]/div[19]/div[3]/div[6]/div[2]")
+spiedejs.click()
+clikers = driver.find_element(By.XPATH, "/html/body/div[2]/div[2]/div[19]/div[3]/div[5]/div[1]")
+clikers.click()
 
 for x in range(1, 100000):
 
@@ -53,7 +59,7 @@ for x in range(1, 100000):
         daudz = cepuma_daudz()
         spiedeji = int(soup.find(id="productPrice0").text)
         vecmams = int(soup.find(id="productPrice1").text)
-
+     
         if daudz > spiedeji:
             spiedejs = driver.find_element(By.XPATH, "/html/body/div[2]/div[2]/div[19]/div[3]/div[6]/div[2]")
             spiedejs.click()
@@ -65,6 +71,9 @@ for x in range(1, 100000):
         elif daudz > vecmams:
              vecmama = driver.find_element(By.XPATH, "/html/body/div[2]/div[2]/div[19]/div[3]/div[6]/div[3]")
              vecmama.click()
+
+        
+           
 
 
 
