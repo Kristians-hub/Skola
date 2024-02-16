@@ -20,44 +20,65 @@ url = "https://orteil.dashnet.org/cookieclicker/"
 
 driver.get(url)
 
-time.sleep(2)
+time.sleep(1)
 consent_button = driver.find_element(By.XPATH, "/html/body/div[3]/div[2]/div[1]/div[2]/div[2]/button[1]")
 consent_button.click()
 
-time.sleep(2)
+time.sleep(1.5)
 english = driver.find_element(By.XPATH, "/html/body/div[2]/div[2]/div[12]/div/div[1]/div[1]/div[2]")
 english.click()
 
-time.sleep(5)
+time.sleep(1)
 cepums = driver.find_element(By.XPATH, "/html/body/div[2]/div[2]/div[15]/div[8]/button")
 
 source = driver.page_source
 soup = BeautifulSoup(source, "html.parser")
-item = soup.find(id="cookies").text
-d = item.split(" ")
-daudz = int(d[0])
+
+
+
 spiedeji = int(soup.find(id="productPrice0").text)
 
+def cepuma_daudz():
+    source = driver.page_source
+    soup = BeautifulSoup(source, "html.parser")
+    item = soup.find(id="cookies").text
+    d = item.split(" ")
+    daudz = int(d[0])
+    return daudz
 
-if daudz > spiedeji :
-    spiedejs = driver.find_element(By.XPATH, "/html/body/div[2]/div[2]/div[19]/div[3]/div[6]/div[2]")
-    spiedejs.click()
 
-else :
-    for x in range(1, 100):
-        
+for x in range(1, 100000):
+
         cepums.click()
-
-        item = soup.find(id="cookies").text
-        d = item.split(" ")
-        source = driver.page_source
-        soup = BeautifulSoup(source, "html.parser")
-        daudz = int(d[0])
+        daudz = cepuma_daudz()
         spiedeji = int(soup.find(id="productPrice0").text)
-    
-   
+        vecmams = int(soup.find(id="productPrice1").text)
+
+        if daudz > spiedeji:
+            spiedejs = driver.find_element(By.XPATH, "/html/body/div[2]/div[2]/div[19]/div[3]/div[6]/div[2]")
+            spiedejs.click()
+
+            cepums = driver.find_element(By.XPATH, "/html/body/div[2]/div[2]/div[15]/div[8]/button")
+            source = driver.page_source
+            soup = BeautifulSoup(source, "html.parser")
+            spiedeji = int(soup.find(id="productPrice0").text)
+        elif daudz > vecmams:
+             vecmama = driver.find_element(By.XPATH, "/html/body/div[2]/div[2]/div[19]/div[3]/div[6]/div[3]")
+             vecmama.click()
 
 
 
-time.sleep(400)
+
+
+
+spiedejs = driver.find_element(By.XPATH, "/html/body/div[2]/div[2]/div[19]/div[3]/div[6]/div[2]")
+spiedejs.click()
+
+
+
+
+
+time.sleep(400000)
 driver.quit()
+
+#/html/body/div[3]/div[2]/div[1]/div[2]/div[2]/button[1]
