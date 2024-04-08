@@ -1,0 +1,156 @@
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
+import time
+
+options = webdriver.ChromeOptions()
+options.add_argument("--no-sandbox")
+options.add_argument("--disable-dev-shm-usage")
+
+webdriver_service = Service(ChromeDriverManager().install())
+driver = webdriver.Chrome(service=webdriver_service, options=options)
+url = "https://orteil.dashnet.org/cookieclicker/"
+driver.get(url)
+
+source = driver.page_source
+soup = BeautifulSoup(source, "html.parser")
+
+def click():
+    spid = driver.find_element(By.XPATH, "//*[@id='product0']")
+    spid.click()
+#saīsināts clicker upgrade spiedējs
+    
+def cookie():
+    cookie = driver.find_element(By.XPATH, "/html/body/div[2]/div[2]/div[15]/div[8]/button")
+    cookie.click()
+#cepuma spiedēja saīsinajums
+def upgrade():
+    upgrade = driver.find_element(By.XPATH, "//*[@id='upgrade0']")
+    upgrade.click()
+#upgrade pogas saīsinājums
+def remove_comma(integer_string):
+    numeric_text = ''.join(filter(str.isdigit, integer_string.replace(" million", "000000")))  # Replace "million" with "000000" and extract numeric characters
+    return int(numeric_text)
+#pārmaina vārdus uz cipariem
+def vecma():
+    vec_skaits = driver.find_element(By.XPATH, "//*[@id='product1']")
+    vec_skaits.click()
+
+def farm():
+    farm = driver.find_element(By.XPATH, "//*[@id='product2']")
+    farm.click()
+
+def rakt():
+    rakt = driver.find_element(By.XPATH, "//*[@id='product3']")
+    rakt.click()
+
+def rupnica():
+    rupnicas = driver.find_element(By.XPATH, "//*[@id='product4']")
+    rupnicas.click()
+
+def reiz():
+    _reizes =driver.find_element(By.XPATH, "/html/body/div[2]/div[2]/div[19]/div[3]/div[6]/div[1]/div[4]")
+    _reizes.click()
+
+def vienreiz():
+    viens =driver.find_element(By.XPATH, "/html/body/div[2]/div[2]/div[19]/div[3]/div[6]/div[1]/div[3]")
+    viens.click()
+
+
+#def click_maksa():
+    #source = driver.page_source
+    #soup = BeautifulSoup(source, "html.parser")
+    #click_maksa = int(remove_comma(soup.find(id="productPrice0").text))
+    #return click_maksa
+
+def daudzuma():
+    source = driver.page_source
+    soup = BeautifulSoup(source, "html.parser")
+    daudz = int(remove_comma(soup.find(id="cookies").text.split()[0]))
+    click_maksa = int(remove_comma(soup.find(id="productPrice0").text))
+    vec_maksa = int(remove_comma(soup.find(id="productPrice1").text))
+    farm_maksa = int(remove_comma(soup.find(id="productPrice2").text))
+    rakt_maksa = int(remove_comma(soup.find(id="productPrice3").text))
+    rupnica_maksa = int(remove_comma(soup.find(id="productPrice4").text))
+    #upgrade_maksa = int(remove_comma(soup.find(id="upgrade0").text))
+    
+    return daudz, click_maksa, vec_maksa, farm_maksa, rakt_maksa, rupnica_maksa
+#visi daudzumi tiek izvilkti no mājaslapas lai kodas varētu tālāk kodā to salīdzināt
+
+time.sleep(1)
+
+#kods kurš ļauj sākt spēlēt cookie clicker, nospiž consent un valodas pogu
+
+consent_button = driver.find_element(By.XPATH, "/html/body/div[3]/div[2]/div[1]/div[2]/div[2]/button[1]")
+consent_button.click()
+
+english = driver.find_element(By.XPATH, "/html/body/div[2]/div[2]/div[12]/div/div[1]/div[1]/div[2]")
+english.click()
+
+time.sleep(1)
+for x in range(150):
+    cookie()
+
+click()
+time.sleep(0.5)
+upgrade()
+
+for x in range(250):
+    cookie()
+
+element = driver.find_element(By.ID, "sectionRight")
+driver.execute_script("arguments[0].scrollTop = arguments[0].scrollTop + 320;", element)
+
+upgrade()
+reiz()
+for x in range(90):
+    cookie()
+
+click()
+vienreiz()
+
+for x in range(2500):
+    cookie()
+
+upgrade()
+
+element = driver.find_element(By.ID, "sectionRight")
+driver.execute_script("arguments[0].scrollTop = arguments[0].scrollTop + 300;", element)
+
+h = 1
+while h > h-1:
+    
+    for x in range(250):
+        cookie()
+        daudz, click_maksa, vec_maksa, farm_maksa, rakt_maksa, rupnica_maksa = daudzuma()
+
+    time.sleep(0.5)
+    upgrade()
+
+        
+    if daudz > rupnica_maksa:
+        for x in range(5):
+            rupnica()
+
+    if daudz > rakt_maksa:
+        for x in range(5):
+            rakt()
+        
+    if daudz > farm_maksa:
+        for x in range(5):
+            farm()
+            
+        
+    if daudz > vec_maksa:
+        for x in range(5):
+            vecma()
+        
+        
+    if daudz > click_maksa:
+        
+        click()
+        click()
