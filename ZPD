@@ -1,0 +1,45 @@
+import pandas as pd
+
+
+file_path = r"C:\ZPD\Raw Data\2012_2013 (2).xlsx"
+
+df = pd.read_excel(file_path)
+df.to_csv(r"C:\ZPD\Raw Data\2012_2013 (2).csv", index=False)
+
+
+data_cols = [
+'Klase',
+'Angļu valoda', 
+'Angļu valoda -p',
+'Bioloģija', 
+'Dabaszinības', 
+'Ekonomika', 
+'Fizika', 
+'Ģeogrāfija', 
+'Ievads zinātniski pētnieciskajā darbībā', 
+'Informātika', 
+'Klases stunda', 
+'Krievu valoda', 
+'Kulturaloģija', 
+'Kulturoloģija', 
+'Ķīmija', 
+'Latviešu valoda', 
+'Latvijas un pasaules vēsture', 
+'Latvijas vēsture', 
+'Literatūra', 
+'Matemātika', 
+'Matemātika-p', 
+'Mājturība un tehnoloģijas', 
+'Mūzika', 'Pasaules vēsture', 
+'Sociālās zinības', 'Sports', 
+'Vācu valoda', 'Veselības mācība', 
+'Vizuālā māksla', 
+'x Pārcelšanas eksāmens matemātikā', 
+'Zinātniski pētnieciskais darbs', 
+]
+
+new_df = df[data_cols]
+
+new_df = new_df.replace(["i", "\(.*?\)", "n", "v", "\|", "atb" ], "", regex=True)
+
+print(new_df)
