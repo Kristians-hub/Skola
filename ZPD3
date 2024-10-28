@@ -1,0 +1,41 @@
+import pandas as pd
+
+file_path = r"\\ri.riga.lv\r64vs\Audzekni\kkudors\My Documents\12.klase\ZPD\2012_2013ZPD.xlsx"
+
+# Load Excel data into DataFrame
+df = pd.read_excel(file_path)
+
+# Select only the needed columns
+data_cols = [
+    'Klase', 'Angļu valoda', 'Angļu valoda -p', 'Bioloģija', 'Dabaszinības', 
+    'Ekonomika', 'Fizika', 'Ģeogrāfija', 'Informātika', 'Klases stunda', 
+    'Krievu valoda', 'Kulturaloģija', 'Kulturoloģija', 'Ķīmija', 'Latviešu valoda', 
+    'Latvijas un pasaules vēsture', 'Latvijas vēsture', 'Literatūra', 'Matemātika', 
+    'Matemātika-p', 'Mājturība un tehnoloģijas', 'Mūzika', 'Pasaules vēsture', 
+    'Sociālās zinības', 'Sports', 'Vācu valoda', 'Veselības mācība', 'Vizuālā māksla', 
+    'x Pārcelšanas eksāmens matemātikā', 'Zinātniski pētnieciskais darbs'
+]
+new_df = df[data_cols]
+
+# Clean the data in "Angļu valoda" column using raw strings for regex patterns
+new_df = new_df.replace([" "], ",", regex=True)
+new_df = new_df.replace([r"i,", r"nv,", r"atb,", r"\(.*?\)", r"n", r"i", r"\d\|", r"v", r"\|"], "", regex=True)
+new_df = new_df.replace([r"v,"], ",", regex=True)
+new_df = new_df.replace(["atb"], "", regex=True)
+new_df = new_df.replace([",,,"], ",", regex=True)
+new_df = new_df.replace([",,"], ",", regex=True)
+
+#noņem liekās kolonas
+#new_df = new_df[new_df['Angļu valoda'].notna()]
+
+# Handle missing values and convert "Angļu valoda" to lists of integers
+new_df['Angļu valoda'] = new_df['Angļu valoda'].apply(lambda x: list(map(int, filter(None, str(x).split(',')))) if pd.notna(x) else [])
+
+# Calculate the average for each list in "Angļu valoda" and create a new column "Average"
+new_df['Average'] = new_df['Angļu valoda'].apply(lambda x: sum(x) / len(x) if x else 0)
+
+
+# Save the DataFrame with the new column to a new Excel file
+new_df.to_excel(r"C:\Users\kkudors\desktop\test33.xlsx", sheet_name="ZPD Data", index=False)
+
+print(new_df[['Klase', 'Angļu valoda', 'Average']])
