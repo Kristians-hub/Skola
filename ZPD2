@@ -1,0 +1,89 @@
+import pandas as pd
+
+
+file_path = r"\\ri.riga.lv\r64vs\Audzekni\kkudors\My Documents\12.klase\ZPD\2012_2013ZPD.xlsx"
+
+df = pd.read_excel(file_path)
+df.to_csv(r"\\ri.riga.lv\r64vs\Audzekni\kkudors\My Documents\12.klase\ZPD\2012_2013ZPD.csv", index=False)
+
+
+data_cols = [
+
+'Klase',
+'Angļu valoda', 
+'Angļu valoda -p',
+'Bioloģija', 
+'Dabaszinības', 
+'Ekonomika', 
+'Fizika', 
+'Ģeogrāfija', 
+
+'Informātika', 
+'Klases stunda', 
+'Krievu valoda', 
+'Kulturaloģija', 
+'Kulturoloģija', 
+'Ķīmija', 
+'Latviešu valoda', 
+'Latvijas un pasaules vēsture', 
+'Latvijas vēsture', 
+'Literatūra', 
+'Matemātika', 
+'Matemātika-p', 
+'Mājturība un tehnoloģijas', 
+'Mūzika', 'Pasaules vēsture', 
+'Sociālās zinības', 'Sports', 
+'Vācu valoda', 'Veselības mācība', 
+'Vizuālā māksla', 
+'x Pārcelšanas eksāmens matemātikā', 
+'Zinātniski pētnieciskais darbs', 
+]
+
+
+
+new_df = df[data_cols]
+
+new_df = new_df.replace([" "], ",", regex=True)
+
+new_df = new_df.replace(["i,", "nv,", "atb,", "\(.*?\)", "n", "i", "\d\|", "v", "\|" ], "", regex=True)
+new_df = new_df.replace(["v,"], ",", regex=True)
+new_df = new_df.replace(["atb"], "", regex=True)
+new_df = new_df.replace([",,,"], ",", regex=True)
+new_df = new_df.replace([",,"], ",", regex=True)
+
+
+a = new_df["Angļu valoda"]
+
+a = str(a).split(",")
+#a = [int(i) for i in a]
+
+#average = sum(a) / len(a)
+print(a)
+
+#for i in range(len(new_df)):
+ #   a = new_df.at[i, 'Angļu valoda']
+  #  a = str(a).split(",")
+
+#new_df['Angļu valoda'] = new_df['Angļu valoda'].astype(float)
+
+#new_df = new_df.replace(["i", "\(.*?\)", "n", "v", "\|", "atb" ], "", regex=True)
+
+
+
+
+#new_df['Angļu valoda -p'] = new_df['Angļu valoda'].astype(float).mean()
+
+#cell_value = new_df.at[1, 'Angļu valoda'].astype(float).mean()
+#average_value = cell_value
+#new_df.at[2, 'Angļu valoda -p'] = average_value
+
+#print(new_df)
+
+new_df = new_df[new_df['Angļu valoda'].notna()]
+#new_df['A Vid'] = new_df['Angļu valoda'].apply(lambda x: sum(map(float, filter(None, str(x).split(',')))) / len(filter(None, str(x).split(','))) if str(x).split(',') else 0)
+
+
+
+
+
+new_df.to_excel(r"C:\Users\kkudors\desktop\test31.xlsx", sheet_name="ZPD Data", index=False)
