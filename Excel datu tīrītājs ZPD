@@ -1,0 +1,68 @@
+import pandas as pd
+import re
+from pathlib import Path
+
+# Define the file path
+file_path = Path(r"C:\ZPD\Raw Data\2012_2013 (2).xlsx")
+
+# Load the Excel file into a DataFrame
+df = pd.read_excel(file_path)
+
+# Select only the needed columns
+data_cols = [
+    'Klase', 'Angļu valoda', 'Angļu valoda -p', 'Bioloģija', 'Dabaszinības', 
+    'Ekonomika', 'Fizika', 'Ģeogrāfija', 'Informātika', 'Klases stunda', 
+    'Krievu valoda', 'Kulturaloģija', 'Kulturoloģija', 'Ķīmija', 'Latviešu valoda', 
+    'Latvijas un pasaules vēsture', 'Latvijas vēsture', 'Literatūra', 'Matemātika', 
+    'Matemātika-p', 'Mājturība un tehnoloģijas', 'Mūzika', 'Pasaules vēsture', 
+    'Sociālās zinības', 'Sports', 'Vācu valoda', 'Vizuālā māksla'
+]
+new_df = df[data_cols]
+
+new_df = new_df[new_df['Angļu valoda'].notna()]
+
+# Additional data cleaning
+new_df = new_df.replace([" "], ",", regex=True)
+new_df = new_df.replace([r"i,", r"nv,", r"atb,", r"\(.*?\)", r"n", r"i", r"\d\|", r"v", r"\|"], "", regex=True)
+new_df = new_df.replace([r"v,"], ",", regex=True)
+new_df = new_df.replace(["atb"], "", regex=True)
+new_df = new_df.replace([",,,"], ",", regex=True)
+new_df = new_df.replace([",,"], ",", regex=True)
+
+# Function to clean cell data and convert to a list of numbers
+def clean_and_convert(cell):
+    if pd.isna(cell):
+        return []
+    
+    # Convert cell to a string
+    cell_str = str(cell)
+    
+    # Remove all characters except digits and commas
+    cleaned_str = re.sub(r"[^\d,]", "", cell_str)
+    print(f"Original cell: '{cell_str}', Cleaned cell: '{cleaned_str}'")
+    
+    # Split by commas and filter out empty entries, converting to integers
+    numbers = [int(num) for num in cleaned_str.split(',') if num.isdigit()]
+    
+    # Debugging output to verify the cleaned and split data
+    print(f"Processed numbers: {numbers}")
+
+    return numbers
+
+# Apply cleaning and averaging to each relevant column
+for col in data_cols:
+    if col == 'Klase':
+        continue
+    
+    # Clean and convert each cell to a list of integers
+    new_df[col] = new_df[col].apply(clean_and_convert)
+    
+    # Calculate the average for each list and store it in a new column
+    new_df[f'{col}_Average'] = new_df[col].apply(lambda x: sum(x) / len(x) if x else 0)
+
+# Save the cleaned DataFrame with the average columns to a new Excel file
+output_path = Path(r"C:\ZPD\cleaner_data\tests_15.xlsx")
+new_df.to_excel(output_path, sheet_name="ZPD Data", index=False)
+
+# Display the result to check the averages
+print(new_df[[col for col in new_df.columns if '_Average' in col]])
