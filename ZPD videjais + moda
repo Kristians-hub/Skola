@@ -4,29 +4,31 @@ from pathlib import Path
 from collections import Counter
 
 # Define the file path
-file_path = Path(r"\\ri.riga.lv\r64vs\Audzekni\kkudors\My Documents\12.klase\ZPD\2012_2013ZPD.xlsx")
+file_path = Path(r"C:\ZPD\Raw Data\2020_2021.xlsx")
 
 # Load the Excel file into a DataFrame
 df = pd.read_excel(file_path)
 
 # Select only the needed columns
 data_cols = [
-    'Klase', 'Angļu valoda', 'Angļu valoda -p', 'Bioloģija', 'Dabaszinības', 
-    'Ekonomika', 'Fizika', 'Ģeogrāfija', 'Informātika', 'Klases stunda', 
-    'Krievu valoda', 'Kulturaloģija', 'Kulturoloģija', 'Ķīmija', 'Latviešu valoda', 
-    'Latvijas un pasaules vēsture', 'Latvijas vēsture', 'Literatūra', 'Matemātika', 
-    'Matemātika-p', 'Mājturība un tehnoloģijas', 'Mūzika', 'Pasaules vēsture', 
-    'Sociālās zinības', 'Sports', 'Vācu valoda', 'Vizuālā māksla'
+
+'Klase', 'Nr.', 'Uzvārds, vārds', 'Aktiermeistarība', 'Angļu valoda', 'Angļu valoda -p', 'Bioloģija', 'Bioloģija I', 'Bioloģija I 2gr', 'Bioloģija-p', 'Dabaszinības', 'Datorika', 'Dizains un tehnoloģijas', 'Dizains un tehnoloģijas I', 'Ekonomika', 'Fizika', 'Fizika I', 'Fizika-P', 'Ģeogrāfija', 'Ģeogrāfija I', 'Ievads zinātniski pētnieciskajā darbībā', 'Informātika', 'Klases stunda', 'Krievu valoda', 'Kulturoloģija', 'Kultūras pamati', 'Ķīmija', 'Ķīmija I', 'Ķīmija I 2gr', 'Ķīmija p', 'Latviešu valoda', 'Latviešu valoda I', 'Latviešu valoda -p', 'Latvijas un pasaules vēsture', 'Latvijas vēsture', 'Literatūra', 'Literatūra I', 'Literatūra-p', 'Matemātika', 'Matemātika I', 'Matemātika-I 2gr', 'Matemātika-p', 'Mājturība un tehnoloģijas', 'Mūzika', 'Pasaules vēsture', 'Pārcelšanas eksāmens matemātikā', 'Politika un tiesības', 'Programmēšana I', 'Projekta darbs', 'Psiholoģija', 'Radošo industriju producēšana', 'Režijas pamati', 'Skatuves kustības', 'Skatuves runa', 'Sociālās zinības', 'Sociālās zinības un vēsture', 'Sports', 'Sports un veselība', 'Sports un Veselība', 'Sports un veselība R.', 'Svešvalda I (B2)', 'Svešvaloda (B1) Krievu valoda', 'Svešvaloda (B1) Vācu valoda', 'Teātra māksla', 'Vācu valoda', 'Veselības mācība', 'Vēsture un sociālās zinātnes I', 'Vizuālā māksla', 'x Nobeiguma darbs Ķīmijā', 'x Nobeiguma darbs Latvijas vēsturē', 'x Nobeiguma darbs matemātikā', 'Zinātniski pētnieciskais darbs', 'Slimības dēļ', 'Citu iemeslu dēļ', 'Neattaisnoti', 'Kavētās stundas'
+
+
 ]
+
 new_df = df[data_cols]
 
-# Additional data cleaning
-new_df = new_df.replace([" "], ",", regex=True)
-new_df = new_df.replace([r"i,", r"nv,", r"atb,", r"\(.*?\)", r"n", r"i", r"\d\|", r"v", r"\|"], "", regex=True)
-new_df = new_df.replace([r"v,"], ",", regex=True)
-new_df = new_df.replace(["atb"], "", regex=True)
-new_df = new_df.replace([",,,"], ",", regex=True)
-new_df = new_df.replace([",,"], ",", regex=True)
+# Additional data cleaning for specific columns (excluding 'Uzvārds, vārds')
+clean_cols = [col for col in data_cols if col != 'Uzvārds, vārds']
+new_df[clean_cols] = new_df[clean_cols].replace([" "], ",", regex=True)
+new_df[clean_cols] = new_df[clean_cols].replace([r"i,", r"nv,", r"atb,", r"\(.*?\)", r"n", r"i", r"\d\|", r"v", r"\|"], "", regex=True)
+new_df[clean_cols] = new_df[clean_cols].replace([r"v,"], ",", regex=True)
+new_df[clean_cols] = new_df[clean_cols].replace(["atb"], "", regex=True)
+new_df[clean_cols] = new_df[clean_cols].replace([",,,"], ",", regex=True)
+new_df[clean_cols] = new_df[clean_cols].replace([",,"], ",", regex=True)
+
+new_df = new_df[new_df['Angļu valoda'].notna()]
 
 # Function to clean cell data and convert to a list of numbers
 def clean_and_convert(cell):
@@ -38,13 +40,13 @@ def clean_and_convert(cell):
     
     # Remove all characters except digits and commas
     cleaned_str = re.sub(r"[^\d,]", "", cell_str)
-    print(f"Original cell: '{cell_str}', Cleaned cell: '{cleaned_str}'")
+    #print(f"Original cell: '{cell_str}', Cleaned cell: '{cleaned_str}'")
     
     # Split by commas and filter out empty entries, converting to integers
     numbers = [int(num) for num in cleaned_str.split(',') if num.isdigit()]
     
     # Debugging output to verify the cleaned and split data
-    print(f"Processed numbers: {numbers}")
+    #print(f"Processed numbers: {numbers}")
 
     return numbers
 
@@ -58,8 +60,9 @@ def find_mode(numbers):
     return mode_value
 
 # Apply cleaning, averaging, and mode calculation to each relevant column
+skip_cols = ['Klase', 'Nr.', 'Uzvārds, vārds', 'Slimības dēļ', 'Citu iemeslu dēļ', 'Neattaisnoti', 'Kavētās stundas']
 for col in data_cols:
-    if col == 'Klase':
+    if col in skip_cols:
         continue
     
     # Clean and convert each cell to a list of integers
@@ -74,7 +77,7 @@ for col in data_cols:
 # Calculate the overall mode of the '_Mode' column for each subject and add as the last row
 modes_summary = {}
 for col in data_cols:
-    if col == 'Klase':
+    if col in skip_cols:
         continue
     
     # Collect the modes and calculate the most frequent mode for each column
@@ -87,8 +90,8 @@ overall_mode_row = pd.DataFrame(modes_summary, index=["Overall Mode"])
 new_df = pd.concat([new_df, overall_mode_row], ignore_index=True)
 
 # Save the cleaned DataFrame with the average and mode columns to a new Excel file
-output_path = Path(r"C:\Users\kkudors\desktop\test44.xlsx")
+output_path = Path(r"C:\ZPD\Clean data\2020_2021Final.xlsx")
 new_df.to_excel(output_path, sheet_name="ZPD Data", index=False)
 
 # Display the result to check the averages and modes
-print(new_df[[col for col in new_df.columns if '_Average' in col or '_Mode' in col]])
+#print(new_df[[col for col in new_df.columns if '_Average' in col or '_Mode' in col]])
