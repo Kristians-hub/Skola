@@ -1,0 +1,118 @@
+import pandas as pd
+import re
+from pathlib import Path
+from collections import Counter
+
+# Define the file path
+file_path = Path(r"C:\ZPD\Raw Data\2021_2022.xlsx")
+
+# Load the Excel file into a DataFrame
+df = pd.read_excel(file_path)
+
+# Select only the needed columns
+data_cols = [
+    'Klase', 'Nr.', 'Uzvārds, vārds', 'Aktiermeistarība', 'Angļu valoda', 'Angļu valoda I (B2)', 'Angļu valoda -p',
+    'Bioloģija', 'Bioloģija I', 'Dabaszinības', 'Datorika', 'Dizains un tehnoloģijas', 'Dizains un tehnoloģijas I',
+    'Ekonomika', 'Fizika', 'Fizika I', 'Fizika I (2gr)', 'Ģeogrāfija', 'Ģeogrāfija I', 'Ievads zinātniski pētnieciskajā darbībā',
+    'Informātika', 'Klases stunda', 'Krievu valoda', 'Krievu valoda I (B1)', 'Kulturoloģija', 'Kultūra un māksla I',
+    'Ķīmija', 'Ķīmija I', 'Latviešu valoda', 'Latviešu valoda I', 'Latviešu valoda -p', 'Latvijas un pasaules vēsture',
+    'Latvijas vēsture', 'Literatūra', 'Literatūra I', 'Literatūra I (2.gr)', 'Literatūra-p', 'Matemātika', 'Matemātika I',
+    'Matemātika I (2.gr)', 'Matemātika-p', 'Mājturība un tehnoloģijas', 'Mūzika', 'Pasaules vēsture', 'Politika un tiesības',
+    'Programmēšana I', 'Projekta darbs', 'Psiholoģija', 'Publiskā uzstāšanās', 'Radošo industriju producēšana', 'Režijas pamati',
+    'Robotika', 'Skatuves kustības', 'Sociālās zinības', 'Sociālās zinības un vēsture', 'Sports', 'Sports un veselība',
+    'Sports un veselība III', 'Teātra māksla', 'Uzņēmējdarbības pamati', 'Vācu valoda', 'Vācu valoda I (B1)',
+    'Vēsture un sociālās zinātnes I', 'Vizuālā māksla', 'Zinātniski pētnieciskais darbs', 'Slimības dēļ',
+    'Citu iemeslu dēļ', 'Neattaisnoti', 'Kavētās stundas'
+]
+
+new_df = df[data_cols]
+
+# Additional data cleaning for specific columns (excluding 'Uzvārds, vārds')
+clean_cols = [col for col in data_cols if col != 'Uzvārds, vārds']
+new_df[clean_cols] = new_df[clean_cols].replace([r"\d+(,\d+)*%"], "", regex=True)
+new_df[clean_cols] = new_df[clean_cols].replace([" "], ",", regex=True)
+new_df[clean_cols] = new_df[clean_cols].replace([r"i,", r"nv,", r"atb,", r"\(.*?\)", r"n", r"i", r"\d\|", r"v", r"\|"], "", regex=True)
+new_df[clean_cols] = new_df[clean_cols].replace([r"[STAP]"], "", regex=True)
+new_df[clean_cols] = new_df[clean_cols].replace([r"v,"], ",", regex=True)
+new_df[clean_cols] = new_df[clean_cols].replace(["atb"], "", regex=True)
+new_df[clean_cols] = new_df[clean_cols].replace([",,,"], ",", regex=True)
+new_df[clean_cols] = new_df[clean_cols].replace([",,"], ",", regex=True)
+
+new_df = new_df[new_df['Angļu valoda'].notna()]
+
+# Function to clean cell data and convert to a list of numbers
+def clean_and_convert(cell):
+    if pd.isna(cell):
+        return []
+    
+    # Convert cell to a string
+    cell_str = str(cell)
+    
+    # Step 1: Remove letters S, T, A, P
+    #cell_str = re.sub(r"[STAP]", "", cell_str)
+    
+    # Step 2: Remove numbers followed by '%' (handles numbers like 46,72%)
+    #cell_str = re.sub(r"\d+(,\d+)*%", "", cell_str)
+    
+    # Step 3: Remove all characters except digits and commas
+    cleaned_str = re.sub(r"[^\d,]", "", cell_str)
+    
+    # Split by commas and filter out empty entries, converting to integers
+    numbers = [int(num) for num in cleaned_str.split(',') if num.isdigit()]
+    
+    return numbers
+
+# Function to find the mode (most frequent number) in a list
+def find_mode(numbers):
+    if not numbers:
+        return None
+    # Use Counter to find the most common number
+    frequency = Counter(numbers)
+    mode_value = frequency.most_common(1)[0][0]  # Get the number with the highest frequency
+    return mode_value
+
+# Apply cleaning, averaging, and mode calculation to each relevant column
+averages = {}
+modes = {}
+skip_cols = ['Klase', 'Nr.', 'Uzvārds, vārds', 'Slimības dēļ', 'Citu iemeslu dēļ', 'Neattaisnoti', 'Kavētās stundas']
+for col in data_cols:
+    if col in skip_cols:
+        continue
+    
+    # Clean and convert each cell to a list of integers
+    new_df[col] = new_df[col].apply(clean_and_convert)
+    
+    # Calculate the average for each list
+    averages[f'{col}_Average'] = new_df[col].apply(lambda x: sum(x) / len(x) if x else 0)
+    
+    # Calculate the mode for each list
+    modes[f'{col}_Mode'] = new_df[col].apply(find_mode)
+
+# Combine averages and modes into a single DataFrame
+averages_df = pd.DataFrame(averages)
+modes_df = pd.DataFrame(modes)
+
+# Concatenate averages and modes with the original DataFrame
+new_df = pd.concat([new_df, averages_df, modes_df], axis=1)
+
+# Calculate the overall mode of the '_Mode' column for each subject and add as the last row
+modes_summary = {}
+for col in data_cols:
+    if col in skip_cols:
+        continue
+    
+    # Collect the modes and calculate the most frequent mode for each column
+    mode_column = new_df[f'{col}_Mode'].dropna().tolist()  # Drop NaNs if any
+    overall_mode = find_mode(mode_column)
+    modes_summary[f'{col}_Mode'] = overall_mode
+
+# Append the overall mode row to the DataFrame
+overall_mode_row = pd.DataFrame(modes_summary, index=["Overall Mode"])
+new_df = pd.concat([new_df, overall_mode_row], ignore_index=True)
+
+# Save the cleaned DataFrame with the average and mode columns to a new Excel file
+output_path = Path(r"C:\ZPD\Clean data\2021_2022Final.xlsx")
+new_df.to_excel(output_path, sheet_name="ZPD Data", index=False)
+
+# Display the result to check the averages and modes
+#print(new_df[[col for col in new_df.columns if '_Average' in col or '_Mode' in col]])
