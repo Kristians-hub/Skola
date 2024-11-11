@@ -1,0 +1,141 @@
+// Motor connections
+#define IN1 8
+#define IN2 7
+#define IN3 5
+#define IN4 4
+
+// HC-SR04 ultrasonic sensor connections
+#define echoPin 13
+#define trigPin 12
+
+// RGB LED pins
+#define RED_PIN 10
+#define GREEN_PIN 11
+#define BLUE_PIN 12
+
+// Button pin
+#define BUTTON_PIN 2
+
+// LCD display
+#include <LiquidCrystal_I2C.h>
+#include <Wire.h>
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+// Ultrasonic sensor variables
+long duration;
+int distance;
+
+// Robot state (active or stopped)
+bool robotActive = false;
+
+void setup() {
+  // Initialize serial communication
+  Serial.begin(9600);
+
+  // Motor pins as OUTPUT
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
+
+  // HC-SR04 sensor pins
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+
+  // RGB LED pins as OUTPUT
+  pinMode(RED_PIN, OUTPUT);
+  pinMode(GREEN_PIN, OUTPUT);
+  pinMode(BLUE_PIN, OUTPUT);
+
+  // Button pin as INPUT
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+
+  // LCD setup
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0, 0);
+  lcd.print("Kudors");
+  lcd.setCursor(0, 1);
+  lcd.print("Arduino");
+  delay(5000);
+  lcd.clear();
+}
+
+void atpakal() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, HIGH);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+}
+
+void uzPrieksu() {
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+}
+
+void apstaties() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, LOW);
+}
+
+void toggleRobotState() {
+  robotActive = !robotActive;  // Toggle the robot state
+
+  if (robotActive) {
+    // Robot is active, light up the LED green
+    digitalWrite(GREEN_PIN, HIGH);
+    digitalWrite(RED_PIN, LOW);
+  } else {
+    // Robot is stopped, light up the LED red
+    digitalWrite(GREEN_PIN, LOW);
+    digitalWrite(RED_PIN, HIGH);
+  }
+}
+
+void loop() {
+  // Read the button state
+  static bool lastButtonState = HIGH;
+  bool currentButtonState = digitalRead(BUTTON_PIN);
+
+  // Check if the button has been pressed (high to low transition)
+  if (lastButtonState == HIGH && currentButtonState == LOW) {
+    toggleRobotState();  // Toggle the robot's state when the button is pressed
+    delay(200);  // Debounce delay
+  }
+  lastButtonState = currentButtonState;
+
+  if (!robotActive) {
+    // If the robot is stopped, do nothing
+    apstaties();
+    return;
+  }
+
+  // Otherwise, check distance using the ultrasonic sensor
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(50);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(100);
+  digitalWrite(trigPin, LOW);
+
+  duration = pulseIn(echoPin, HIGH);
+  distance = duration * 0.034 / 2 - 0.99;
+
+  // Update LCD with distance
+  lcd.setCursor(0, 0);
+  lcd.print("Distance: ");
+  lcd.setCursor(0, 1);
+  lcd.print(distance);
+
+  // Control robot's movement based on distance
+  if (distance > 40) {
+    uzPrieksu();  // Move forward
+  } else if (distance == 40) {
+    apstaties();  // Stop
+  } else if (distance < 38) {
+    atpakal();  // Move backward
+  }
+}
