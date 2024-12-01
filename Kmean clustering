@@ -1,0 +1,71 @@
+import pandas as pd
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Load the ZPD Data sheet
+file_path = r"C:\ZPD\Kmeans\2013_2014Final.xlsx"  # Replace with your file path
+zpd_data = pd.read_excel(file_path, sheet_name='ZPD Data')
+
+# Remove non-numerical columns (e.g., 'Klase')
+zpd_numeric = zpd_data.select_dtypes(include=[np.number])
+
+# Standardize the data
+scaler = StandardScaler()
+zpd_scaled = scaler.fit_transform(zpd_numeric)
+
+# Determine the optimal number of clusters using the elbow method
+inertia = []
+k_values = range(1, 11)
+
+for k in k_values:
+    kmeans = KMeans(n_clusters=k, random_state=42)
+    kmeans.fit(zpd_scaled)
+    inertia.append(kmeans.inertia_)
+
+# Plot the elbow curve
+plt.figure(figsize=(8, 5))
+plt.plot(k_values, inertia, marker='o', linestyle='--')
+plt.xlabel('Number of Clusters (k)')
+plt.ylabel('Inertia')
+plt.title('Elbow Method for Optimal k')
+plt.show()
+
+# Choose the optimal number of clusters based on the elbow curve
+optimal_k = 4  # Adjust this value based on the elbow plot
+
+# Apply k-means clustering
+kmeans = KMeans(n_clusters=optimal_k, random_state=42)
+clusters = kmeans.fit_predict(zpd_scaled)
+
+# Add cluster labels to the original dataset
+zpd_data['Cluster'] = clusters
+
+# Save the clustered data to a new Excel file
+output_file_path = 'clustered_zpd_data.xlsx'  # Replace with desired output path
+zpd_data.to_excel(output_file_path, index=False)
+
+# Analyze clusters
+print("Cluster centroids:")
+print(kmeans.cluster_centers_)
+
+# Optional: Visualize clusters (e.g., using PCA for dimensionality reduction)
+from sklearn.decomposition import PCA
+
+pca = PCA(n_components=2)
+zpd_pca = pca.fit_transform(zpd_scaled)
+
+plt.figure(figsize=(8, 5))
+for cluster in range(optimal_k):
+    plt.scatter(
+        zpd_pca[clusters == cluster, 0],
+        zpd_pca[clusters == cluster, 1],
+        label=f'Cluster {cluster}'
+    )
+
+plt.xlabel('PCA Component 1')
+plt.ylabel('PCA Component 2')
+plt.title('Clusters Visualization (PCA)')
+plt.legend()
+plt.show()
