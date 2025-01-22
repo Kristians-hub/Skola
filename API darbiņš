@@ -1,0 +1,50 @@
+import requests 
+import json 
+#1.uzd 
+"""
+url = "https://jsonplaceholder.typicode.com/users/" 
+response = requests.get(url) 
+dati = response.json() 
+print(f"Ierakstu skaits: {len(dati)}") 
+"""
+#2.UZD
+"""
+url = "https://jsonplaceholder.typicode.com/users/" 
+response = requests.get(url) 
+dati = response.json() 
+list(name["name"] for name in dati) 
+print(list(name["name"] for name in dati) )
+"""
+#3.uzd
+"""
+url = "https://jsonplaceholder.typicode.com/users/" 
+response = requests.get(url) 
+dati = response.json()
+
+for email in dati:
+    if email["email"].endswith("@april.biz"):
+        print(email["username"])
+
+"""	
+
+#4uzd
+"""
+url = "https://jsonplaceholder.typicode.com/users/" 
+response = requests.get(url) 
+dati = response.json()
+
+unique_citys = list(set(city["address"]["city"] for city in dati))
+print(unique_citys)
+"""
+# 5uzd
+"""
+url = "https://jsonplaceholder.typicode.com/users/" 
+response = requests.get(url) 
+dati = response.json()
+
+info_count = 0
+for website in dati:
+    if website["website"].endswith(".info"):
+        info_count += 1
+print(f"Websites kuri beidzas ar .info: {info_count}")
+"""
