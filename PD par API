@@ -1,0 +1,60 @@
+import requests 
+
+url = "https://api.open-meteo.com/v1/forecast?latitude=56.9496&longitude=24.1052&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m&timezone=auto&start_date=2025-01-24&end_date=2025-01-25"
+response = requests.get(url) 
+dati = response.json() 
+
+
+#1.uzd
+temperatura = dati["hourly"]["temperature_2m"] #izvelk no api šim uzdevumam vajadzīgos datus
+vid_temp = sum(temperatura) / len(temperatura) # funkcija kas aprēķina vidējo temperatūru
+print(f"Vidējā temperatūra: {vid_temp}")
+
+
+mitrums = dati["hourly"]["relative_humidity_2m"] 
+print(f"Minimālais mitrums: {min(mitrums)}") #atrod un izprintē mazāko mitrumu
+
+
+#2.uzd
+vējš = dati["hourly"]["wind_speed_10m"]
+laiks = dati["hourly"]["time"]
+#dati par temperaturu jau tika izvilkti 1.uzd
+
+laiks_vejs_temp = list(zip(laiks, vējš, temperatura)) #saliek kopā visus vajadzīgos datus, lai nākamais solis būtu vieglāks
+
+liels_vējš = {} # izveido dictonary priekš nākamā soļa
+
+for laiks, vējš, temperatura in laiks_vejs_temp:  #for cikls, kurš iepriekš viedotajā zipotajā listā atrod vēju > 20 un tad to pievieno liels_vējš dictonary
+    if int(vējš) > 20:
+        liels_vējš[laiks] = [vējš, temperatura]
+
+print(liels_vējš)
+
+#3.uzd
+def max_vejs(dati):
+    vējš = dati["hourly"]["wind_speed_10m"]
+    laiks = dati["hourly"]["time"]
+    vejs_laiks = zip(vējš, laiks) # savieno vēju un laiku kopā
+    max_vējs = max(vējš) # atrod maksimnālo vēja vērtību
+
+    for vējš, laiks in vejs_laiks: # cikls, kas meklē zipā vejs_laiks maksimālo vēja vērtību un pēc tam izdrukā maksimālā vēja vērtības laiku
+        if vējš == max_vējs:
+            
+            return(f"Liels vējš: {max_vējs} m/s, bija {laiks}") # smuki un saprotami izdrukā rezultātu
+print(max_vejs(dati)) #izprintē funkcijas max_vejs rezultatu
+
+def ekstremi_laiki(dati):
+    temperatura = dati["hourly"]["temperature_2m"]
+    mitrums = dati["hourly"]["relative_humidity_2m"] 
+
+    temp_mitr = zip(temperatura, mitrums) # apvieno temperaturu un mitrumu kopā
+    Ekstrēmie_laiki = 0 # lai vieglāk skaitīt ekstrēmo laiku skaitu, tiek izveiots šis mainīgais
+    for temperatura, mitrums in temp_mitr: # cikls, kas iet cauri zip temp_mitr un meklē temperatūra kas zemāka par 3 un mintrumu, kas augstāka par 90
+        if temperatura < 3 and mitrums >= 90:
+            Ekstrēmie_laiki += 1 # katru reizi kas funkcija atrod ekstrēmu laiku, kuram atbilst abi nosacijumi, pie ekstremi_laiki pievieno klāt vienu vērtību
+
+    return(f"Ekstrēmi laiku skaits: {Ekstrēmie_laiki}") # smuki un saprotami izdrukā rezultātu
+
+
+print(ekstremi_laiki(dati))
+    
