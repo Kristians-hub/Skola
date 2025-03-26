@@ -1,0 +1,202 @@
+import tkinter as tk
+from tkinter import messagebox
+import serial
+import serial.tools.list_ports
+from datetime import datetime
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import threading
+
+class WaterMonitorApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Ūdens Līmeņa Monitorings - Arduino")
+        
+        # Mainīgie
+        self.water_level = 0
+        self.threshold = 30
+        self.history = []
+        self.serial_connection = None
+        self.running = True
+        
+        # GUI
+        self.create_widgets()
+        self.connect_arduino()
+        
+        # Sāk datu nolasīšanu no Arduino
+        self.start_serial_thread()
+    
+    def create_widgets(self):
+        # Galvenais rāmis
+        main_frame = tk.Frame(self.root, padx=20, pady=20)
+        main_frame.pack()
+        
+        # Savienojuma statuss
+        self.connection_label = tk.Label(main_frame, text="Arduino: Nav savienots", fg="red")
+        self.connection_label.pack()
+        
+        # Ūdens līmeņa displejs
+        self.water_level_label = tk.Label(main_frame, text="Ūdens līmenis: --%", font=('Arial', 24))
+        self.water_level_label.pack(pady=10)
+        
+        # Progress bar
+        self.progress_bar = tk.Canvas(main_frame, width=300, height=30, bg="white")
+        self.progress_bar.pack()
+        self.progress_rect = self.progress_bar.create_rectangle(0, 0, 0, 30, fill="blue")
+        
+        # Pogas panelis
+        button_frame = tk.Frame(main_frame)
+        button_frame.pack(pady=10)
+        
+        tk.Button(button_frame, text="Statistika", command=self.show_stats).pack(side=tk.LEFT, padx=5)
+        tk.Button(button_frame, text="Grafiks", command=self.show_graph).pack(side=tk.LEFT, padx=5)
+        tk.Button(button_frame, text="Iestatījumi", command=self.change_settings).pack(side=tk.LEFT, padx=5)
+        tk.Button(button_frame, text="Pārslēgt Arduino", command=self.reconnect_arduino).pack(side=tk.LEFT, padx=5)
+        
+        # Žurnāla logs
+        self.log_text = tk.Text(main_frame, height=10, width=50, state=tk.DISABLED)
+        self.log_text.pack(pady=10)
+    
+    def connect_arduino(self):
+        ports = serial.tools.list_ports.comports()
+        arduino_ports = [p.device for p in ports if 'Arduino' in p.description or 'CH340' in p.description]
+        
+        if not arduino_ports:
+            messagebox.showerror("Kļūda", "Nav atrasts Arduino!")
+            return None
+        
+        try:
+            self.serial_connection = serial.Serial(arduino_ports[0], 9600, timeout=1)
+            self.connection_label.config(text=f"Arduino: Savienots ({arduino_ports[0]})", fg="green")
+            self.add_log("Arduino savienots veiksmīgi")
+        except Exception as e:
+            messagebox.showerror("Kļūda", f"Nevar pieslēgties Arduino:\n{str(e)}")
+    
+    def start_serial_thread(self):
+        self.serial_thread = threading.Thread(target=self.read_serial_data, daemon=True)
+        self.serial_thread.start()
+    
+    def read_serial_data(self):
+        while self.running and self.serial_connection:
+            try:
+                line = self.serial_connection.readline().decode('utf-8').strip()
+                if line:
+                    try:
+                        level = int(line)
+                        self.update_water_level(level)
+                    except ValueError:
+                        self.add_log(f"Neatpazīta vērtība: {line}")
+            except:
+                if self.running:
+                    self.add_log("Kļūda nolasot datus no Arduino")
+                    break
+    
+    def update_water_level(self, level):
+        self.water_level = level
+        now = datetime.now().strftime("%H:%M:%S")
+        self.history.append({'time': now, 'level': level})
+        
+        # Atjaunina GUI
+        self.water_level_label.config(text=f"Ūdens līmenis: {level}%")
+        
+        # Atjaunina progress bar
+        progress_width = (level / 100) * 300
+        self.progress_bar.coords(self.progress_rect, 0, 0, progress_width, 30)
+        color = "green" if level > self.threshold else "red"
+        self.progress_bar.itemconfig(self.progress_rect, fill=color)
+        
+        self.add_log(f"{now} - Līmenis: {level}%")
+        
+        # Pārbauda slieksni
+        if level <= self.threshold:
+            self.root.after(100, lambda: messagebox.showwarning("Brīdinājums", f"Ūdens līmenis ir zems: {level}%"))
+    
+    def add_log(self, message):
+        self.log_text.config(state=tk.NORMAL)
+        self.log_text.insert(tk.END, message + "\n")
+        self.log_text.see(tk.END)
+        self.log_text.config(state=tk.DISABLED)
+    
+    def show_stats(self):
+        if not self.history:
+            messagebox.showinfo("Statistika", "Nav datu!")
+            return
+        
+        levels = [entry['level'] for entry in self.history]
+        avg_level = sum(levels) / len(levels)
+        min_level = min(levels)
+        max_level = max(levels)
+        
+        # Aprēķina iztvaikošanas ātrumu
+        rate = 0
+        if len(self.history) > 1:
+            time_diff = (datetime.strptime(self.history[-1]['time'], "%H:%M:%S") - 
+                        datetime.strptime(self.history[0]['time'], "%H:%M:%S")).total_seconds() / 3600
+            level_diff = self.history[0]['level'] - self.history[-1]['level']
+            if time_diff > 0:
+                rate = level_diff / time_diff
+        
+        stats_msg = (
+            f"Pašreizējais līmenis: {self.water_level}%\n"
+            f"Vidējais līmenis: {avg_level:.1f}%\n"
+            f"Minimālais līmenis: {min_level}%\n"
+            f"Maksimālais līmenis: {max_level}%\n"
+            f"Iztvaikošanas ātrums: {rate:.1f}%/h"
+        )
+        
+        messagebox.showinfo("Statistika", stats_msg)
+    
+    def show_graph(self):
+        if len(self.history) < 2:
+            messagebox.showinfo("Grafiks", "Nepietiek datu!")
+            return
+        
+        graph_window = tk.Toplevel(self.root)
+        graph_window.title("Ūdens līmeņa grafiks")
+        
+        times = [entry['time'] for entry in self.history]
+        levels = [entry['level'] for entry in self.history]
+        
+        fig, ax = plt.subplots(figsize=(8, 4))
+        ax.plot(times, levels, 'b-', marker='o')
+        ax.axhline(y=self.threshold, color='r', linestyle='--', label='Kritiskais līmenis')
+        ax.set_title("Ūdens līmeņa izmaiņas")
+        ax.set_xlabel("Laiks")
+        ax.set_ylabel("Līmenis (%)")
+        ax.grid(True)
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        
+        canvas = FigureCanvasTkAgg(fig, master=graph_window)
+        canvas.draw()
+        canvas.get_tk_widget().pack()
+    
+    def change_settings(self):
+        new_threshold = tk.simpledialog.askinteger(
+            "Mainīt slieksni",
+            f"Pašreizējais slieksnis: {self.threshold}%\nIevadiet jauno vērtību (0-100):",
+            minvalue=0, maxvalue=100
+        )
+        
+        if new_threshold is not None:
+            self.threshold = new_threshold
+            self.add_log(f"Mainīts slieksnis uz {self.threshold}%")
+    
+    def reconnect_arduino(self):
+        if self.serial_connection:
+            self.serial_connection.close()
+        self.connect_arduino()
+        if self.serial_connection:
+            self.start_serial_thread()
+    
+    def on_closing(self):
+        self.running = False
+        if self.serial_connection:
+            self.serial_connection.close()
+        self.root.destroy()
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = WaterMonitorApp(root)
+    root.protocol("WM_DELETE_WINDOW", app.on_closing)
+    root.mainloop()
