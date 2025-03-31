@@ -1,0 +1,36 @@
+#define WATER_SENSOR_PIN A0
+#define POWER_PIN 7
+
+
+const int dryValue = 520;
+const int wetValue = 260;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(POWER_PIN, OUTPUT);
+  
+  
+  Serial.println("Arduino ūdens sensors started");
+}
+
+void loop() {
+  digitalWrite(POWER_PIN, HIGH);
+  delay(50);  
+  
+  
+  int sensorValue = analogRead(WATER_SENSOR_PIN);
+  
+
+  digitalWrite(POWER_PIN, LOW);
+  
+
+  int waterLevel = map(sensorValue, dryValue, wetValue, 0, 100);
+  waterLevel = constrain(waterLevel, 0, 100);
+  
+  
+  Serial.print("{\"water_level\":");
+  Serial.print(waterLevel);
+  Serial.println("}");
+  
+  delay(5000);  // Sūta datus ik pēc 5 sekundēm
+}
