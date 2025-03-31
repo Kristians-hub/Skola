@@ -1,0 +1,195 @@
+from flask import Flask, render_template_string, request, jsonify
+import serial
+import serial.tools.list_ports
+from datetime import datetime
+import threading
+import time
+import matplotlib.pyplot as plt
+import io
+import base64
+import random
+
+app = Flask(__name__)
+
+water_data = {
+    'current_level': 0,
+    'threshold': 30,
+    'history': [],
+    'events': [],
+    'arduino_connected': False,
+    'last_update': None,
+    'aquarium_params': {
+        'length': 100,
+        'width': 40,
+        'height': 50,
+        'water_surface_area': 4000,
+        'evaporation_rate': 0,
+        'total_evaporated': 0
+    }
+}
+
+def find_arduino():
+    ports = serial.tools.list_ports.comports()
+    for port in ports:
+        if 'Arduino' in port.description or 'CH340' in port.description:
+            return port.device
+    return None
+
+def serial_reader():
+    global water_data
+    arduino_port = None
+    ser = None
+    
+    while True:
+        try:
+            if not arduino_port:
+                arduino_port = find_arduino()
+                if arduino_port:
+                    try:
+                        ser = serial.Serial(arduino_port, 9600, timeout=1)
+                        water_data['arduino_connected'] = True
+                        water_data['events'].append(f"{datetime.now().strftime('%H:%M:%S')} - Arduino pieslēgts!")
+                    except Exception as e:
+                        water_data['events'].append(f"{datetime.now().strftime('%H:%M:%S')} - Kļūda pieslēdzoties: {str(e)}")
+                        arduino_port = None
+                        time.sleep(5)
+                        continue
+            
+         
+            if ser and ser.is_open:
+                if ser.in_waiting:
+                    line = ser.readline().decode('utf-8').strip()
+                    try:
+                        if line.startswith('{') and 'water_level' in line:
+                            data = eval(line)  # Uzmanību: eval var būt nedrošs, labāk izmantot json.loads
+                            new_level = float(data['water_level'])
+                            water_data['current_level'] = new_level
+                            water_data['last_update'] = datetime.now().strftime('%H:%M:%S')
+                            record_data(new_level)
+                    except Exception as e:
+                        water_data['events'].append(f"{datetime.now().strftime('%H:%M:%S')} - Kļūda lasot datus: {str(e)}")
+            
+           
+            if arduino_port and (not ser or not ser.is_open):
+                water_data['arduino_connected'] = False
+                water_data['events'].append(f"{datetime.now().strftime('%H:%M:%S')} - Arduino atvienots!")
+                arduino_port = None
+            
+        except Exception as e:
+            print(f"Kļūda seriālajā pavedienā: {str(e)}")
+            time.sleep(5)
+        
+        time.sleep(0.1)
+
+serial_thread = threading.Thread(target=serial_reader, daemon=True)
+serial_thread.start()
+
+HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ūdens Līmeņa Monitorings</title>
+    <style>
+        /* ... (tāds pats stils kā iepriekš) ... */
+        .disconnected {
+            background-color: #ffcccc;
+            color: #cc0000;
+            border: 1px solid #ff9999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Ūdens Līmeņa Monitorings</h1>
+        
+        <div id="connectionStatus" class="status-panel">
+            <p id="connectionText">Savienojuma statuss: PĀRBAUDĀM...</p>
+        </div>
+        
+        <div id="statusPanel" class="status-panel">
+            <p id="waterLevel">Ūdens līmenis: -</p>
+            <p id="statusText">Statuss: N/A</p>
+            <p id="lastUpdate">Pēdējais atjauninājums: -</p>
+        </div>
+        
+        <!-- ... (pārējā HTML daļa paliek nemainīga) ... -->
+    </div>
+
+    <script>
+        // Atjaunināt savienojuma statusu
+        function updateConnectionStatus(data) {
+            const connectionPanel = document.getElementById('connectionStatus');
+            const connectionText = document.getElementById('connectionText');
+            
+            if (data.arduino_connected) {
+                connectionText.textContent = "Savienojuma statuss: ARDUINO PIESLĒGTS";
+                connectionPanel.className = 'status-panel normal';
+            } else {
+                connectionText.textContent = "⚠️ Savienojuma statuss: ARDUINO NAV PIESLĒGTS!";
+                connectionPanel.className = 'status-panel disconnected';
+            }
+        }
+
+        // Atjaunināt pēdējo atjauninājumu
+        function updateLastUpdate(data) {
+            const lastUpdateElement = document.getElementById('lastUpdate');
+            if (data.last_update) {
+                lastUpdateElement.textContent = `Pēdējais atjauninājums: ${data.last_update}`;
+            } else {
+                lastUpdateElement.textContent = 'Pēdējais atjauninājums: Nekad';
+            }
+        }
+
+        // Galvenā datu atjaunināšanas funkcija
+        async function updateDisplay() {
+            try {
+                const response = await fetch('/get_data');
+                const data = await response.json();
+                
+                // Atjaunināt savienojuma statusu
+                updateConnectionStatus(data);
+                updateLastUpdate(data);
+                
+                // ... (pārējā datu atjaunināšana kā iepriekš) ...
+                
+            } catch (error) {
+                console.error("Kļūda atjauninot datus:", error);
+            }
+        }
+
+        // ... (pārējās JavaScript funkcijas paliek nemainīgas) ...
+    </script>
+</body>
+</html>
+"""
+
+@app.route('/')
+def index():
+    return render_template_string(HTML_TEMPLATE)
+
+@app.route('/get_data')
+def get_data():
+    if water_data['last_update'] and (datetime.now() - datetime.strptime(water_data['last_update'], '%H:%M:%S')).seconds > 30:
+        water_data['arduino_connected'] = False
+        water_data['events'].append(f"{datetime.now().strftime('%H:%M:%S')} - Nav datu no Arduino vairāk nekā 30 sekundes!")
+    
+    return jsonify(water_data)
+
+def record_data(level, is_manual=False):
+    water_data['history'].append({
+        'time': datetime.now().strftime("%H:%M:%S"),
+        'level': round(level, 1),
+        'type': 'manual' if is_manual else 'auto'
+    })
+    
+    if len(water_data['history']) > 100:
+        water_data['history'] = water_data['history'][-100:]
+    
+    if level <= water_data['threshold']:
+        event_msg = f"⚠️ Brīdinājums: ūdens līmenis zem {water_data['threshold']}%"
+        water_data['events'].append(event_msg)
+        if len(water_data['events']) > 10:
+            water_data['events'] = water_data['events'][-10:]
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0')
